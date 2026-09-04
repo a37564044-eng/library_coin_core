@@ -1,0 +1,5 @@
+build/
+release/
+release-android-arm64/
+*.dat
+*.tmp
