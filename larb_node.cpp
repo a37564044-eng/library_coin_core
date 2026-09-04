@@ -22,6 +22,18 @@ int main(int argc, char* argv[]) {
     std::signal(SIGINT, handle_signal);
     std::signal(SIGTERM, handle_signal);
 
+    if (argc >= 2 &&
+        (std::string(argv[1]) == "--help" ||
+         std::string(argv[1]) == "-h")) {
+        std::cout << "LARB Full Node\n";
+        std::cout << "Usage: ./larb_node [PORT] [PEER_HOST] [PEER_PORT] [CHAIN_FILE]\n";
+        std::cout << "\n";
+        std::cout << "Defaults:\n";
+        std::cout << "  PORT       8333\n";
+        std::cout << "  CHAIN_FILE larb_chain.dat\n";
+        return 0;
+    }
+
     std::cout << "=== LARB FULL NODE ===\n";
 
     const larb::Block genesis = larb::Genesis::create();
