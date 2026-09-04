@@ -9,3 +9,4 @@ release-android-arm64/
 *.broken
 *_debug.cpp
 *_roundtrip_compare.cpp
+*before_final_cleanup*
