@@ -3,3 +3,9 @@ release/
 release-android-arm64/
 *.dat
 *.tmp
+
+*.bak*
+*.backup*
+*.broken
+*_debug.cpp
+*_roundtrip_compare.cpp
