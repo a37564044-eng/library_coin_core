@@ -47,10 +47,7 @@ int main() {
     const std::string alice_address =
         larb::AddressCodec::encode(alice_payload);
 
-    const std::string alice_script =
-        larb::Script::pay_to_pubkey_hash(
-            alice_keys.public_key
-        );
+    const std::string alice_script = alice_address;
 
     /*
      * =========================================================
@@ -184,10 +181,13 @@ int main() {
      * =========================================================
      */
 
+    const std::string fork_b_address =
+        alice_address + "-FORK-B";
+
     larb::Transaction b1_coinbase =
         larb::Transaction::coinbase(
             larb::get_block_reward(1),
-            alice_address,
+            fork_b_address,
             1
         );
 
@@ -203,7 +203,7 @@ int main() {
     larb::Transaction b2_coinbase =
         larb::Transaction::coinbase(
             larb::get_block_reward(2),
-            alice_address,
+            fork_b_address,
             2
         );
 
@@ -219,7 +219,7 @@ int main() {
     larb::Transaction b3_coinbase =
         larb::Transaction::coinbase(
             larb::get_block_reward(3),
-            alice_address,
+            fork_b_address,
             3
         );
 

@@ -1,0 +1,5 @@
+LARB Mainnet Release Candidate
+Genesis: 00032373b4b4b78d9f32723dc913bec6c6eb3a0e2a5db92a16bb0f3be4ed909a
+Difficulty: 3
+Halving: 210000 blocks
+Tests: 57/57 PASS

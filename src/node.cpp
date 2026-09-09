@@ -1,6 +1,7 @@
 #include "node.h"
 
 #include "block_validator.h"
+#include "transaction_validator.h"
 #include "persistence.h"
 #include "consensus/pow.h"
 
@@ -12,6 +13,7 @@ Node::Node(
 )
     : blockchain_(genesis, difficulty),
       utxos_{},
+      mempool_{},
       difficulty_(difficulty) {
 }
 
@@ -39,6 +41,49 @@ bool Node::receive_block(const Block& block) {
     }
 
     return blockchain_.add_block(block);
+}
+
+bool Node::submit_transaction(const Transaction& tx) {
+    /*
+     * Transaction harus memiliki input dan output.
+     */
+    if (tx.inputs.empty() || tx.outputs.empty()) {
+        return false;
+    }
+
+    /*
+     * Input dan nilai transaksi harus valid
+     * terhadap UTXO set node saat ini.
+     */
+    if (!validate_transaction_inputs(tx, utxos_)) {
+        return false;
+    }
+
+    if (!validate_transaction_value(tx, utxos_)) {
+        return false;
+    }
+
+    return mempool_.add(tx);
+}
+
+bool Node::remove_transaction(const std::string& txid) {
+    return mempool_.remove(txid);
+}
+
+const Transaction* Node::find_mempool_tx(
+    const std::string& txid
+) const {
+    return mempool_.find_by_txid(txid);
+}
+
+std::vector<std::string> Node::find_mempool_by_address(
+    const std::string& address
+) const {
+    return mempool_.find_by_address(address);
+}
+
+std::size_t Node::mempool_size() const {
+    return mempool_.size();
 }
 
 bool Node::adopt_chain(

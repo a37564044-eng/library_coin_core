@@ -11,6 +11,7 @@ class Wallet {
 public:
     Wallet();
     ~Wallet();
+    static Wallet from_secret_key(const std::vector<uint8_t>& secret_key);
 
     Wallet(const Wallet&) = delete;
     Wallet(Wallet&&) noexcept = default;

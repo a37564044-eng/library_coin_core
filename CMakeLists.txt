@@ -13,9 +13,11 @@ add_library(coin_core STATIC
     src/wallet/wallet.cpp
     src/address_codec.cpp
     src/crypto/pqc.cpp
+    src/crypto/pqc_backend.cpp
     src/transaction.cpp
     src/utxo.cpp
     src/utxo_set.cpp
+    src/mempool.cpp
     src/block.cpp
     src/script.cpp
     src/genesis.cpp
@@ -31,15 +33,20 @@ add_library(coin_core STATIC
     src/persistence.cpp
     src/mainnet_final.cpp
 )
+set_target_properties(coin_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+set(LIBOQS_ROOT "/public/liboqs/build" CACHE PATH "liboqs root directory")
+set(LIBOQS_INCLUDE_DIR "${LIBOQS_ROOT}/include")
+set(LIBOQS_LIBRARY "${LIBOQS_ROOT}/lib/liboqs.a")
 
 target_include_directories(coin_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/wallet
-    /public/liboqs/build/include
+    ${LIBOQS_INCLUDE_DIR}
 )
 
 target_link_libraries(coin_core PUBLIC
-    /public/liboqs/build/lib/liboqs.a
+    ${LIBOQS_LIBRARY}
     OpenSSL::Crypto
 )
 
@@ -909,5 +916,33 @@ target_link_libraries(larb_node PRIVATE
     coin_core
 )
 
+
 install(TARGETS main larb_miner larb_node
         RUNTIME DESTINATION bin)
+
+# Android JNI wrapper for LARB Node
+option(LARB_BUILD_ANDROID "Build Android JNI wrapper" OFF)
+
+if(LARB_BUILD_ANDROID)
+    add_library(larb_android SHARED
+        larb_node.cpp
+        android_jni.cpp
+    )
+
+    target_include_directories(larb_android PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-arm64/sysroot/usr/include
+    )
+
+    target_link_libraries(larb_android PRIVATE
+        coin_core
+    )
+
+    target_link_options(larb_android PRIVATE
+        -static-libstdc++
+    )
+endif()
+
+add_executable(block2_miner block2_miner.cpp)
+target_link_libraries(block2_miner PRIVATE coin_core)

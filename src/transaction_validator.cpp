@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <functional>
 #include <cstdint>
+#include <vector>
 #include <limits>
 
 namespace larb {
@@ -51,11 +52,6 @@ bool validate_transaction_inputs(
             return false;
         }
 
-        if (!Script::is_pay_to_pubkey_hash(
-                utxo->output.script_pubkey)) {
-            return false;
-        }
-
         unsigned char digest[SHA256_DIGEST_LENGTH];
 
         SHA256(
@@ -64,17 +60,15 @@ bool validate_transaction_inputs(
             digest
         );
 
-        const std::string expected_hash(
-            reinterpret_cast<const char*>(digest),
-            SHA256_DIGEST_LENGTH
+        std::vector<std::uint8_t> payload(
+            digest,
+            digest + SHA256_DIGEST_LENGTH
         );
 
-        const std::string actual_hash =
-            Script::extract_pubkey_hash(
-                utxo->output.script_pubkey
-            );
+        const std::string expected_address =
+            AddressCodec::encode(payload);
 
-        if (expected_hash != actual_hash) {
+        if (utxo->output.script_pubkey != expected_address) {
             return false;
         }
 

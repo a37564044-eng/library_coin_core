@@ -1,3 +1,4 @@
+#include "src/p2p.h"
 #include "src/blockchain.h"
 #include "src/block_validator.h"
 #include "src/consensus/constants.h"
@@ -14,7 +15,11 @@
 #include <string>
 #include <cstdlib>
 
-int main() {
+int main(int argc, char* argv[]) {
+    std::string peer_host;
+    std::uint16_t peer_port = 8333;
+    if (argc >= 2) peer_host = argv[1];
+    if (argc >= 3) peer_port = static_cast<std::uint16_t>(std::stoul(argv[2]));
     std::cout << "=== LARB PERSISTENT MINER ===\n";
 
     const char* home = std::getenv("HOME");
@@ -224,6 +229,18 @@ int main() {
         }
 
         std::cout << "Blockchain save: OK\n";
+
+        if (!peer_host.empty()) {
+            larb::P2PServer p2p(peer_port);
+            p2p.add_peer(peer_host, peer_port);
+
+            if (p2p.broadcast_block(block)) {
+                std::cout << "P2P broadcast: OK\n";
+            } else {
+                std::cerr << "P2P broadcast: FAILED\n";
+            }
+        }
+
 
         std::cout << "Chain height: "
                   << blockchain.size() - 1

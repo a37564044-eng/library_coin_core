@@ -5,6 +5,10 @@
 #include "utxo_set.h"
 #include "script.h"
 #include "crypto/pqc.h"
+#include "address_codec.h"
+#include <openssl/sha.h>
+#include <vector>
+#include <cstdint>
 
 #include <iostream>
 #include <string>
@@ -21,10 +25,24 @@ int main() {
     Transaction funding;
     funding.version = 1;
 
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256(
+        reinterpret_cast<const unsigned char*>(
+            keys.public_key.data()
+        ),
+        keys.public_key.size(),
+        digest
+    );
+
+    std::vector<std::uint8_t> payload(
+        digest,
+        digest + SHA256_DIGEST_LENGTH
+    );
+
     funding.outputs.push_back(
         TransactionOutput{
             1000,
-            Script::pay_to_pubkey_hash(keys.public_key)
+            AddressCodec::encode(payload)
         }
     );
 

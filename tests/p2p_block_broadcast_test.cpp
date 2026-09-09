@@ -93,6 +93,8 @@ bool send_block(
         return false;
     }
 
+    std::cerr << "[DEBUG] before connect()\\n" << std::flush;
+
     if (connect(
             fd,
             reinterpret_cast<sockaddr*>(&address),
@@ -102,15 +104,37 @@ bool send_block(
         return false;
     }
 
+    std::cerr << "[DEBUG] connect() OK\\n" << std::flush;
+
     const std::string message =
         submit_message(block);
+
+    std::cerr << "[DEBUG] message size = "
+              << message.size() << "\\n"
+              << std::flush;
+
+    std::cerr << "[DEBUG] before send_all()\\n"
+              << std::flush;
 
     if (!send_all(fd, message)) {
         close(fd);
         return false;
     }
 
+    // Tandai bahwa seluruh request sudah selesai dikirim.
+    // Server menggunakan EOF sebagai batas akhir pesan.
+    if (shutdown(fd, SHUT_WR) < 0) {
+        close(fd);
+        return false;
+    }
+
+    std::cerr << "[DEBUG] send_all() OK\\n"
+              << std::flush;
+
     char buffer[4096]{};
+
+    std::cerr << "[DEBUG] before recv()\\n"
+              << std::flush;
 
     const ssize_t received =
         recv(
@@ -119,6 +143,10 @@ bool send_block(
             sizeof(buffer) - 1,
             0
         );
+
+    std::cerr << "[DEBUG] recv() returned "
+              << received << "\\n"
+              << std::flush;
 
     if (received <= 0) {
         close(fd);

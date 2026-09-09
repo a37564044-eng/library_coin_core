@@ -4,12 +4,14 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <iostream>
 #include <utility>
 #include <vector>
 
@@ -243,7 +245,7 @@ bool P2PServer::start() {
 
     sockaddr_in address{};
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
     address.sin_port = htons(port_);
 
     if (bind(
@@ -436,13 +438,12 @@ bool P2PServer::handle_message(
 
 
 bool P2PServer::serve_once() {
-    if (server_fd_ < 0) {
-        return false;
-    }
+    if (server_fd_ < 0) return false;
 
     sockaddr_in client_address{};
-    socklen_t client_length =
-        sizeof(client_address);
+    socklen_t client_length = sizeof(client_address);
+
+    std::cerr << "[P2P DEBUG] before accept()\n" << std::flush;
 
     const int client_fd = accept(
         server_fd_,
@@ -451,8 +452,11 @@ bool P2PServer::serve_once() {
     );
 
     if (client_fd < 0) {
+        std::cerr << "[P2P DEBUG] accept() failed\n" << std::flush;
         return false;
     }
+
+    std::cerr << "[P2P DEBUG] accept() OK\n" << std::flush;
 
     char buffer[65536]{};
 
@@ -462,6 +466,9 @@ bool P2PServer::serve_once() {
         sizeof(buffer) - 1,
         0
     );
+
+    std::cerr << "[P2P DEBUG] server recv() returned "
+              << received << "\n" << std::flush;
 
     if (received <= 0) {
         close(client_fd);
@@ -473,13 +480,33 @@ bool P2PServer::serve_once() {
         static_cast<std::size_t>(received)
     );
 
+    std::string normalized = message;
+
+    if (message == "PING\n" || message == "PING\r\n") {
+        normalized = "PING";
+    } else if (message == "GET_CHAIN\n" || message == "GET_CHAIN\r\n") {
+        normalized = "GET_CHAIN";
+    }
+
+    std::cerr << "[P2P DEBUG] message size = "
+              << normalized.size() << "\n" << std::flush;
+
     std::string response;
 
-    handle_message(message, response);
-    send_all(client_fd, response);
+    const bool handled = handle_message(normalized, response);
+
+    std::cerr << "[P2P DEBUG] handle_message = "
+              << handled << ", response size = "
+              << response.size() << "\n" << std::flush;
+
+    const bool sent = send_all(client_fd, response);
+
+    std::cerr << "[P2P DEBUG] response sent = "
+              << sent << "\n" << std::flush;
 
     close(client_fd);
-    return true;
+
+    return handled && sent;
 }
 
 } // namespace larb

@@ -1,5 +1,9 @@
 #include "src/transaction_validator.h"
 #include "src/script.h"
+#include "src/address_codec.h"
+#include <openssl/sha.h>
+#include <cstdint>
+#include <vector>
 #include "src/crypto/pqc.h"
 
 #include <iostream>
@@ -15,9 +19,26 @@ int main() {
 
     Transaction funding{};
     funding.version = 1;
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256(
+        reinterpret_cast<const unsigned char*>(
+            keys.public_key.data()
+        ),
+        keys.public_key.size(),
+        digest
+    );
+
+    std::vector<std::uint8_t> payload(
+        digest,
+        digest + SHA256_DIGEST_LENGTH
+    );
+
+    const std::string funding_address =
+        AddressCodec::encode(payload);
+
     funding.outputs.push_back({
         1000,
-        Script::pay_to_pubkey_hash(keys.public_key)
+        funding_address
     });
 
     const std::string funding_txid = funding.txid();
