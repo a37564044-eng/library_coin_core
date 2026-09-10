@@ -245,12 +245,21 @@ bool P2PServer::start() {
 
     int opt = 1;
 
+#ifdef _WIN32
+    if (setsockopt(
+            server_fd_,
+            SOL_SOCKET,
+            SO_REUSEADDR,
+            reinterpret_cast<const char*>(&opt),
+            sizeof(opt)) < 0) {
+#else
     if (setsockopt(
             server_fd_,
             SOL_SOCKET,
             SO_REUSEADDR,
             &opt,
             sizeof(opt)) < 0) {
+#endif
         stop();
         return false;
     }

@@ -15,6 +15,7 @@
 #include <vector>
 
 #ifdef _WIN32
+#include <fcntl.h>
 #include <io.h>
 #include <sys/stat.h>
 #define LARB_PERSISTENCE_OPEN   _open

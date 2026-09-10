@@ -36,10 +36,6 @@ struct ChainWork {
           return !(a > b);
       }
 
-      friend bool operator<=(const ChainWork& a, const ChainWork& b) {
-          return !(a > b);
-      }
-
     friend bool operator==(const ChainWork& a, const ChainWork& b) {
         return a.hi == b.hi && a.lo == b.lo;
     }
