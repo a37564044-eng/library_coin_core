@@ -946,3 +946,18 @@ endif()
 
 add_executable(block2_miner block2_miner.cpp)
 target_link_libraries(block2_miner PRIVATE coin_core)
+
+# ============================================================
+# LARB Windows Portable
+# ============================================================
+if(WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+    foreach(t larb_node larb_miner main)
+        if(TARGET ${t})
+            set_target_properties(${t} PROPERTIES
+                WIN32_EXECUTABLE OFF
+            )
+        endif()
+    endforeach()
+endif()
