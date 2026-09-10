@@ -8,7 +8,53 @@
 
 namespace larb {
 
+#if defined(_MSC_VER) && !defined(__clang__)
+struct ChainWork {
+    std::uint64_t lo = 0;
+    std::uint64_t hi = 0;
+
+    constexpr ChainWork() = default;
+    constexpr ChainWork(std::uint64_t value) : lo(value), hi(0) {}
+
+    ChainWork& operator+=(const ChainWork& other) {
+        const std::uint64_t old_lo = lo;
+        lo += other.lo;
+        hi += other.hi + (lo < old_lo ? 1 : 0);
+        return *this;
+    }
+
+    friend ChainWork operator+(ChainWork a, const ChainWork& b) {
+        a += b;
+        return a;
+    }
+
+    friend bool operator>(const ChainWork& a, const ChainWork& b) {
+        return (a.hi > b.hi) || (a.hi == b.hi && a.lo > b.lo);
+    }
+
+    friend bool operator==(const ChainWork& a, const ChainWork& b) {
+        return a.hi == b.hi && a.lo == b.lo;
+    }
+
+    friend bool operator!=(const ChainWork& a, const ChainWork& b) {
+        return !(a == b);
+    }
+
+    static ChainWork one_shifted(std::uint32_t shift) {
+        ChainWork result;
+        if (shift < 64) {
+            result.lo = std::uint64_t(1) << shift;
+        } else if (shift < 128) {
+            result.hi = std::uint64_t(1) << (shift - 64);
+        }
+        return result;
+    }
+};
+#else
 using ChainWork = unsigned __int128;
+#endif
+
+ChainWork chain_work_one_shifted(std::uint32_t shift);
 
 class Blockchain {
 public:

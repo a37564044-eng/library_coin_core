@@ -6,6 +6,17 @@
 
 namespace larb {
 
+ChainWork chain_work_one_shifted(std::uint32_t shift) {
+#if defined(_MSC_VER) && !defined(__clang__)
+    return ChainWork::one_shifted(shift);
+#else
+    if (shift >= 128) {
+        return static_cast<ChainWork>(0);
+    }
+    return static_cast<ChainWork>(1) << shift;
+#endif
+}
+
 Blockchain::Blockchain(
     const Block& genesis,
     std::uint32_t difficulty
@@ -99,8 +110,7 @@ ChainWork Blockchain::chain_work() const {
     }
 
     const ChainWork work_per_block =
-        static_cast<ChainWork>(1) <<
-        (4 * difficulty_);
+        chain_work_one_shifted(4 * difficulty_);
 
     for (std::size_t i = 1;
          i < chain_.size();
