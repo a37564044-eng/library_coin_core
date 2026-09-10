@@ -2,17 +2,29 @@
 #include "chain_codec.h"
 #include "block.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
 
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <iostream>
 #include <utility>
+#ifdef _WIN32
+#define close closesocket
+using larb_socket_ssize_t = int;
+#else
+using larb_socket_ssize_t = ssize_t;
+#endif
+
 #include <vector>
 
 namespace larb {
@@ -124,7 +136,7 @@ bool send_all(int fd, const std::string& data) {
     std::size_t sent = 0;
 
     while (sent < data.size()) {
-        const ssize_t n = send(
+        const larb_socket_ssize_t n = send(
             fd,
             data.data() + sent,
             data.size() - sent,
@@ -186,7 +198,7 @@ bool send_block_to_peer(
 
     char buffer[4096]{};
 
-    const ssize_t received = recv(
+    const larb_socket_ssize_t received = recv(
         fd,
         buffer,
         sizeof(buffer) - 1,
@@ -346,7 +358,7 @@ bool P2PServer::sync_from_peer(
 
     std::string data;
     char buffer[65536];
-    ssize_t received;
+    larb_socket_ssize_t received;
 
     while ((received = recv(fd, buffer, sizeof(buffer), 0)) > 0) {
         data.append(buffer, static_cast<std::size_t>(received));
@@ -460,7 +472,7 @@ bool P2PServer::serve_once() {
 
     char buffer[65536]{};
 
-    const ssize_t received = recv(
+    const larb_socket_ssize_t received = recv(
         client_fd,
         buffer,
         sizeof(buffer) - 1,

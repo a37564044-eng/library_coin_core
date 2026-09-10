@@ -8,14 +8,30 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdint>
-#include <fcntl.h>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <vector>
+
+#ifdef _WIN32
+#include <io.h>
+#include <sys/stat.h>
+#define LARB_PERSISTENCE_OPEN   _open
+#define LARB_PERSISTENCE_WRITE  _write
+#define LARB_PERSISTENCE_CLOSE  _close
+#define LARB_PERSISTENCE_FSYNC  _commit
+#define LARB_PERSISTENCE_UNLINK _unlink
+#else
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <vector>
+#define LARB_PERSISTENCE_OPEN   ::open
+#define LARB_PERSISTENCE_WRITE  ::write
+#define LARB_PERSISTENCE_CLOSE  ::close
+#define LARB_PERSISTENCE_FSYNC  ::fsync
+#define LARB_PERSISTENCE_UNLINK ::unlink
+#endif
 
 namespace larb {
 
@@ -260,12 +276,21 @@ bool atomic_write(
     const std::string tmp =
         path + ".tmp";
 
+#ifdef _WIN32
     const int fd =
-        ::open(
+        LARB_PERSISTENCE_OPEN(
+            tmp.c_str(),
+            _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY,
+            _S_IREAD | _S_IWRITE
+        );
+#else
+    const int fd =
+        LARB_PERSISTENCE_OPEN(
             tmp.c_str(),
             O_WRONLY | O_CREAT | O_TRUNC,
             0600
         );
+#endif
 
     if (fd < 0) {
         return false;
@@ -275,16 +300,29 @@ bool atomic_write(
     std::size_t remaining = data.size();
 
     while (remaining > 0) {
+#ifdef _WIN32
+        const int written =
+            LARB_PERSISTENCE_WRITE(
+                fd,
+                ptr,
+                static_cast<unsigned int>(
+                    remaining > 0x7fffffffU
+                        ? 0x7fffffffU
+                        : remaining
+                )
+            );
+#else
         const ssize_t written =
-            ::write(
+            LARB_PERSISTENCE_WRITE(
                 fd,
                 ptr,
                 remaining
             );
+#endif
 
         if (written <= 0) {
-            ::close(fd);
-            ::unlink(tmp.c_str());
+            LARB_PERSISTENCE_CLOSE(fd);
+            LARB_PERSISTENCE_UNLINK(tmp.c_str());
             return false;
         }
 
@@ -293,21 +331,21 @@ bool atomic_write(
             static_cast<std::size_t>(written);
     }
 
-    if (::fsync(fd) != 0) {
-        ::close(fd);
-        ::unlink(tmp.c_str());
+    if (LARB_PERSISTENCE_FSYNC(fd) != 0) {
+        LARB_PERSISTENCE_CLOSE(fd);
+        LARB_PERSISTENCE_UNLINK(tmp.c_str());
         return false;
     }
 
-    if (::close(fd) != 0) {
-        ::unlink(tmp.c_str());
+    if (LARB_PERSISTENCE_CLOSE(fd) != 0) {
+        LARB_PERSISTENCE_UNLINK(tmp.c_str());
         return false;
     }
 
     if (::rename(
             tmp.c_str(),
             path.c_str()) != 0) {
-        ::unlink(tmp.c_str());
+        LARB_PERSISTENCE_UNLINK(tmp.c_str());
         return false;
     }
 
