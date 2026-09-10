@@ -1,6 +1,7 @@
 #include "src/genesis.h"
 #include "src/consensus/constants.h"
 #include "src/node.h"
+#include "src/embedded/embedded_chain.h"
 #include "src/p2p.h"
 #include "src/consensus/pow.h"
 #include "src/transaction.h"
@@ -47,7 +48,13 @@ int run_node(int argc, char* argv[]) {
     const larb::Block genesis = larb::Genesis::create();
 
     larb::Node node(genesis, larb::INITIAL_POW_DIFFICULTY);
-    const bool loaded = node.load_state(argc >= 5 ? argv[4] : "larb_chain.dat");
+    const char* chain_path = argc >= 5 ? argv[4] : "larb_chain.dat";
+
+    // First-run bootstrap: restore embedded Block 0..2 only
+    // when no local chain file exists.
+    larb::bootstrap_embedded_chain(chain_path);
+
+    const bool loaded = node.load_state(chain_path);
     std::cout << (loaded ? "Persistence: LOADED\n" : "Persistence: NEW\n");
 
     std::cout << "Genesis: OK\n";

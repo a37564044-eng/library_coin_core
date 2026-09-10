@@ -904,13 +904,47 @@ target_link_libraries(larb_miner PRIVATE
     coin_core
 )
 
+# Generate embedded mainnet chain from larb_chain.dat
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/larb_chain.dat")
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+    set(LARB_EMBED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+    set(LARB_EMBED_HEADER "${LARB_EMBED_DIR}/larb_chain_embedded.h")
+
+    add_custom_command(
+        OUTPUT "${LARB_EMBED_HEADER}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${LARB_EMBED_DIR}"
+        COMMAND ${Python3_EXECUTABLE}
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_file.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/larb_chain.dat"
+            "${LARB_EMBED_HEADER}"
+            "larb_embedded_chain"
+        DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/larb_chain.dat"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_file.py"
+        VERBATIM
+    )
+
+    add_custom_target(larb_chain_embedded
+        DEPENDS "${LARB_EMBED_HEADER}"
+    )
+endif()
+
 add_executable(larb_node
     larb_node.cpp
+    src/embedded/embedded_chain.cpp
 )
 
 target_include_directories(larb_node PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
+
+if(TARGET larb_chain_embedded)
+    add_dependencies(larb_node larb_chain_embedded)
+    target_include_directories(larb_node PRIVATE
+        "${LARB_EMBED_DIR}"
+    )
+endif()
 
 target_link_libraries(larb_node PRIVATE
     coin_core

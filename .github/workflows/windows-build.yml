@@ -1,0 +1,61 @@
+name: LARB Windows x64
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+          .\vcpkg\vcpkg.exe install openssl:x64-windows-static
+
+      - name: Build liboqs
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git
+          cmake -S liboqs -B liboqs/build -A x64 `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\liboqs\install"
+          cmake --build liboqs/build --config Release
+          cmake --install liboqs/build --config Release
+
+      - name: Configure LARB
+        shell: pwsh
+        run: |
+          cmake -S . -B build-windows -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+            -DOPENSSL_USE_STATIC_LIBS=TRUE `
+            -DLIBOQS_ROOT="$env:GITHUB_WORKSPACE\liboqs\install"
+
+      - name: Build LARB
+        shell: pwsh
+        run: |
+          cmake --build build-windows --config Release `
+            --target larb_node larb_miner main block2_miner
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release
+          Copy-Item build-windows\Release\larb_node.exe release\
+          Copy-Item build-windows\Release\larb_miner.exe release\
+          Copy-Item build-windows\Release\main.exe release\larb.exe
+          Copy-Item build-windows\Release\block2_miner.exe release\
+          Compress-Archive -Path release\* -DestinationPath LARB-windows-x64.zip
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: LARB-windows-x64
+          path: LARB-windows-x64.zip
